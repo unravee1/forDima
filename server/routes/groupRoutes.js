@@ -7,19 +7,24 @@ import {
     updateGroup, 
     deleteGroup, 
     addUserToGroup, 
-    removeUserFromGroup 
+    removeUserFromGroup,
+    addMember,
+    reGroup,
+    getSchedule 
 } from '../controllers/groupController.js';
-import { protect, admin, trainerOrAdmin } from '../middleware/authMiddleware.js';
+import { protect, admin, trainer } from '../middleware/authMiddleware.js';
 
+router.route('/schedule').get(protect, getSchedule);
 // Маршрут для отримання всіх груп і створення нової групи
 router.route('/')
     .get(getGroups)
-    .post(protect, trainerOrAdmin, createGroup);
+    .post(protect, trainer, createGroup);
 
 // Маршрут для отримання групи за ID, оновлення і видалення групи
 router.route('/:id')
     .get(getGroupById)
-    .put(protect, trainerOrAdmin, updateGroup)
+    
+    .put(protect, trainer, reGroup)
     .delete(protect, admin, deleteGroup);
 
 // Маршрут для додавання користувача до групи
@@ -29,5 +34,10 @@ router.route('/:id/addUser')
 // Маршрут для видалення користувача з групи
 router.route('/:id/removeUser')
     .post(protect, removeUserFromGroup);
+
+router.route('/:id/add-member')
+    .post(protect, trainer, addMember);
+
+router.route('/schedule').get(protect, getSchedule);
 
 export default router;

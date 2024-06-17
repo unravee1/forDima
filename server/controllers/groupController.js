@@ -6,38 +6,39 @@ import User from '../models/User.js';
 // @route   GET /api/groups
 // @access  Public
 const getGroups = asyncHandler(async (req, res) => {
-    const groups = await Group.find().populate('trainer', 'user specialization').populate('members', 'name email');
+    const groups = await Group.find({}).populate('trainer', 'name');
     res.json(groups);
-});
+  });
 
 // @desc    Get group by ID
 // @route   GET /api/groups/:id
 // @access  Public
 const getGroupById = asyncHandler(async (req, res) => {
-    const group = await Group.findById(req.params.id).populate('trainer', 'user specialization').populate('members', 'name email');
+    const group = await Group.findById(req.params.id).populate('trainer', 'name').populate('members', 'name email');
     if (group) {
-        res.json(group);
+      res.json(group);
     } else {
-        res.status(404);
-        throw new Error('Group not found');
+      res.status(404);
+      throw new Error('Group not found');
     }
-});
+  });
 
 // @desc    Create new group
 // @route   POST /api/groups
 // @access  Private/Trainer
 const createGroup = asyncHandler(async (req, res) => {
-    const { name, description, trainer } = req.body;
-
-    const newGroup = new Group({
-        name,
-        description,
-        trainer,
+    const { name, date, time } = req.body;
+  
+    const group = new Group({
+      name,
+      date,
+      time,
+      trainer: req.user._id,
     });
-
-    const createdGroup = await newGroup.save();
+  
+    const createdGroup = await group.save();
     res.status(201).json(createdGroup);
-});
+  });
 
 // @desc    Update group
 // @route   PUT /api/groups/:id
@@ -58,6 +59,24 @@ const updateGroup = asyncHandler(async (req, res) => {
         throw new Error('Group not found');
     }
 });
+
+const reGroup = asyncHandler(async (req, res) => {
+    const { name, date, time } = req.body;
+  
+    const group = await Group.findById(req.params.id);
+  
+    if (group) {
+      group.name = name;
+      group.date = date;
+      group.time = time;
+  
+      const updatedGroup = await group.save();
+      res.json(updatedGroup);
+    } else {
+      res.status(404);
+      throw new Error('Group not found');
+    }
+  });
 
 // @desc    Delete group
 // @route   DELETE /api/groups/:id
@@ -97,6 +116,26 @@ const addUserToGroup = asyncHandler(async (req, res) => {
     }
 });
 
+const addMember = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+  
+    const user = await User.findOne({ email });
+    const group = await Group.findById(req.params.id);
+  
+    if (user && group) {
+      if (group.members.includes(user._id)) {
+        res.status(400);
+        throw new Error('User already in group');
+      }
+      group.members.push(user._id);
+      await group.save();
+      res.json(group);
+    } else {
+      res.status(404);
+      throw new Error('User or Group not found');
+    }
+  });
+
 // @desc    Remove user from group
 // @route   POST /api/groups/:id/removeUser
 // @access  Private
@@ -120,4 +159,18 @@ const removeUserFromGroup = asyncHandler(async (req, res) => {
     }
 });
 
-export { getGroups, getGroupById, createGroup, updateGroup, deleteGroup, addUserToGroup, removeUserFromGroup };
+const getSchedule = asyncHandler(async (req, res) => {
+    const pageSize = 7; // One week per page
+    const page = Number(req.query.pageNumber) || 1;
+  
+    const count = await Group.countDocuments({});
+    const groups = await Group.find({})
+      .sort({ date: 'asc' })
+      .limit(pageSize)
+      .skip(pageSize * (page - 1))
+      .populate('trainer', 'name');
+  
+    res.json({ groups, page, pages: Math.ceil(count / pageSize) });
+  });
+
+export { getGroups, getGroupById, createGroup, updateGroup, deleteGroup, addUserToGroup, removeUserFromGroup, reGroup, addMember, getSchedule };

@@ -14,7 +14,7 @@ const getCourses = asyncHandler(async (req, res) => {
   // @route   GET /api/courses/:id
   // @access  Private
   const getCourseById = asyncHandler(async (req, res) => {
-    const course = await Course.findById(req.params.id);
+    const course = await Course.findById(req.params.id).populate('trainer', 'name');
     if (course) {
       res.json(course);
     } else {
@@ -22,19 +22,25 @@ const getCourses = asyncHandler(async (req, res) => {
       throw new Error('Course not found');
     }
   });
-
- const createCourse = asyncHandler(async (req, res) => {
-    const { name, description, trainer } = req.body;
-
-    const newCourse = new Course({
-        name,
-        description,
-        trainer,
+  
+  // @desc    Create a new course
+  // @route   POST /api/courses
+  // @access  Private/Trainer
+  const createCourse = asyncHandler(async (req, res) => {
+    const { name, photo, price, shortDescription, extendedDescription } = req.body;
+  
+    const course = new Course({
+      name,
+      photo,
+      price,
+      shortDescription,
+      extendedDescription,
+      trainer: req.user._id,
     });
-
-    const createdCourse = await newCourse.save();
+  
+    const createdCourse = await course.save();
     res.status(201).json(createdCourse);
-});
+  });
 
  const updateCourse = asyncHandler(async (req, res) => {
     const { name, description } = req.body;
@@ -65,4 +71,25 @@ const getCourses = asyncHandler(async (req, res) => {
     }
 });
 
-export {deleteCourse,updateCourse,createCourse, getCourseById,getCourses}
+const editCourse = asyncHandler(async (req, res) => {
+    const { name, photo, price, shortDescription, extendedDescription } = req.body;
+  
+    const course = await Course.findById(req.params.id);
+  
+    if (course) {
+      course.name = name;
+      course.photo = photo;
+      course.price = price;
+      course.shortDescription = shortDescription;
+      course.extendedDescription = extendedDescription;
+      course.trainer = req.user._id; // Update the trainer to the current user
+  
+      const updatedCourse = await course.save();
+      res.json(updatedCourse);
+    } else {
+      res.status(404);
+      throw new Error('Course not found');
+    }
+  });
+
+export {deleteCourse,updateCourse,createCourse, getCourseById,getCourses, editCourse}

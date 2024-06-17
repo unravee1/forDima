@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { Container, Box, Typography, Button } from '@mui/material';
 
 const CoursePage = () => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
   const [error, setError] = useState(null);
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+
 
   useEffect(() => {
     fetchCourseDetails();
   }, []);
 
+
+  
   const fetchCourseDetails = async () => {
     try {
       const response = await fetch(`http://localhost:5000/api/courses/${id}`, {
@@ -18,9 +23,13 @@ const CoursePage = () => {
         },
       });
       const data = await response.json();
-      setCourse(data);
+      if (response.ok) {
+        setCourse(data);
+      } else {
+        setError(data.message);
+      }
     } catch (err) {
-      setError(err.message);
+      setError('Сталася помилка. Спробуйте ще раз.');
     }
   };
 
@@ -32,44 +41,62 @@ const CoursePage = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ userId: localStorage.getItem('userInfo')._id, courseId: course._id, price: course.price }),
+        body: JSON.stringify({ userId: userInfo._id, courseId: course._id, price: course.price }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        alert('Course purchased successfully');
+        alert('Курс успішно придбано');
       } else {
         setError(data.message);
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Сталася помилка. Спробуйте ще раз.');
     }
   };
 
   if (error) {
-    return <div className="text-red-500">{error}</div>;
+    return <Typography color="error">{error}</Typography>;
   }
 
   if (!course) {
-    return <div>Loading...</div>;
+    return <Typography>Завантаження...</Typography>;
   }
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <img src={course.photo} alt={course.name} className="w-full h-64 object-cover rounded-lg" />
-        <h2 className="text-2xl font-bold mt-4">{course.name}</h2>
-        <p className="text-gray-700 mt-2">{course.extendedDescription}</p>
-        <p className="text-green-600 font-bold mt-4">{course.price} UAH</p>
-        <button
-          onClick={handlePurchase}
-          className="btn-primary bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300 ease-in-out mt-4 block text-center"
-        >
-          Purchase
-        </button>
-      </div>
-    </div>
+    <Container>
+      <Box mt={4}>
+        <img src={course.photo} alt={course.name} style={{ width: '100%', height: '300px', objectFit: 'cover' }} />
+        <Typography variant="h4" component="h1" gutterBottom>
+          {course.name}
+        </Typography>
+        <Typography variant="body1">{course.extendedDescription}</Typography>
+        <Typography variant="h6" sx={{ mt: 2 }}>Ціна: {course.price} грн</Typography>
+        <Typography variant="body1" sx={{ mt: 2 }}>Автор: {course.trainer.name}</Typography>
+        {!userInfo.vipStatus && (
+          <Button
+            onClick={handlePurchase}
+            variant="contained"
+            color="primary"
+            sx={{ mt: 2 }}
+          >
+            Придбати курс
+          </Button>
+        )}
+        {userInfo.role === 'trainer' && (
+          <Button
+            component={Link}
+            to={`/courses/${id}/edit`}
+            variant="contained"
+            color="secondary"
+            sx={{ mt: 2, ml: 2 }}
+          >
+            Редагувати курс
+          </Button>
+        )}
+      </Box>
+    </Container>
   );
 };
 

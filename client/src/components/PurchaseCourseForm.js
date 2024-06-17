@@ -1,61 +1,94 @@
 import React, { useState } from 'react';
+import { Container, Box, Typography, Button } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
 
-const PurchaseCourseForm = ({ courseId, coursePrice }) => {
-  const [loading, setLoading] = useState(false);
+const PurchaseCourseForm = () => {
+  const { id } = useParams();
+  const [balance, setBalance] = useState(1200); // Приклад початкового балансу користувача
   const [error, setError] = useState(null);
+  const [course, setCourse] = useState(null);
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  const navigate = useNavigate();
 
-  const handlePurchase = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  useEffect(() => {
+    fetchCourseDetails();
+  }, []);
 
-    if (userInfo.vipStatus) {
-      alert('You have free access to this course as a VIP member.');
-      return;
-    }
-
+  const fetchCourseDetails = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/payment/purchase-course', {
-        method: 'POST',
+      const response = await fetch(`http://localhost:5000/api/courses/${id}`, {
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ userId: userInfo._id, courseId, price: coursePrice }),
       });
-
+      const data = await response.json();
       if (response.ok) {
-        alert('Course purchased successfully');
-        // Оновіть інформацію користувача в localStorage
-        const updatedUser = { ...userInfo, balance: userInfo.balance - coursePrice };
-        localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        setCourse(data);
       } else {
-        const data = await response.json();
         setError(data.message);
       }
     } catch (err) {
-      setError('Failed to purchase course');
-    } finally {
-      setLoading(false);
+      setError('Сталася помилка. Спробуйте ще раз.');
     }
   };
 
+  const handlePayment = async () => {
+    const coursePrice = userInfo.vip ? 0 : course.price; // VIP користувачі мають безкоштовний доступ
+
+    if (balance >= coursePrice) {
+      try {
+        const response = await fetch('http://localhost:5000/api/payments/purchase-course', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ userId: userInfo._id, courseId: course._id, price: coursePrice }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setBalance(balance - coursePrice);
+          alert('Курс успішно придбано');
+          navigate(`/courses/${id}`);
+        } else {
+          setError(data.message);
+        }
+      } catch (err) {
+        setError('Сталася помилка. Спробуйте ще раз.');
+      }
+    } else {
+      setError('Недостатньо коштів на балансі.');
+    }
+  };
+
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
+
+  if (!course) {
+    return <Typography>Завантаження...</Typography>;
+  }
+
   return (
-    <div className="container mx-auto px-4">
-      <div className="max-w-lg mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">Purchase Course</h2>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-        <form onSubmit={handlePurchase}>
-          <button
-            type="submit"
-            className="btn-primary bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out w-full"
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : `Buy for ${coursePrice} UAH`}
-          </button>
-        </form>
-      </div>
-    </div>
+    <Container>
+      <Box mt={4}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Придбати курс
+        </Typography>
+        <Typography variant="h6">Ваш баланс: {balance} грн</Typography>
+        <Typography variant="body1">Ціна курсу: {course.price} грн</Typography>
+        <Button
+          onClick={handlePayment}
+          variant="contained"
+          color="primary"
+          sx={{ mt: 2 }}
+        >
+          Придбати курс
+        </Button>
+      </Box>
+    </Container>
   );
 };
 

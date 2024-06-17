@@ -1,12 +1,15 @@
 import mongoose from 'mongoose';
 
-const groupSchema = mongoose.Schema(
-  {
+const groupSchema = mongoose.Schema({
     name: {
       type: String,
       required: true,
     },
-    description: {
+    date: {
+      type: Date,
+      required: true,
+    },
+    time: {
       type: String,
       required: true,
     },
@@ -15,11 +18,13 @@ const groupSchema = mongoose.Schema(
       required: true,
       ref: 'User',
     },
-  },
-  {
+    members: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+  }, {
     timestamps: true,
-  }
-);
+  });
 
 const Group = mongoose.model('Group', groupSchema);
 

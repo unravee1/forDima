@@ -5,9 +5,10 @@ import {
     getTrainerById, 
     createTrainer, 
     updateTrainer, 
-    deleteTrainer 
+    deleteTrainer,
+    updateTrainerProfile 
 } from '../controllers/trainerController.js';
-import { protect, admin } from '../middleware/authMiddleware.js';
+import { protect, admin, } from '../middleware/authMiddleware.js';
 
 // Маршрут для отримання всіх тренерів і створення нового тренера
 router.route('/')
@@ -18,6 +19,7 @@ router.route('/')
 router.route('/:id')
     .get(getTrainerById)
     .put(protect, admin, updateTrainer)
+    .put(protect, updateTrainerProfile)
     .delete(protect, admin, deleteTrainer);
 
 export default router;

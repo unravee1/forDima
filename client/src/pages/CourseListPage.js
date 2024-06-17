@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Container, Box, Typography, Grid, Paper, Button } from '@mui/material';
 
 const CoursesPage = () => {
   const [courses, setCourses] = useState([]);
   const [error, setError] = useState(null);
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
   useEffect(() => {
     fetchCourses();
@@ -17,67 +19,57 @@ const CoursesPage = () => {
         },
       });
       const data = await response.json();
-      if (Array.isArray(data)) {
-        setCourses(data);
-      } else {
-        throw new Error('Invalid data format');
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handlePurchase = async (courseId, price) => {
-    try {
-      const response = await fetch('http://localhost:5000/api/payments/purchase-course', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ userId: localStorage.getItem('userInfo')._id, courseId, price }),
-      });
-
-      const data = await response.json();
-
       if (response.ok) {
-        alert('Course purchased successfully');
+        setCourses(data);
       } else {
         setError(data.message);
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Сталася помилка. Спробуйте ще раз.');
     }
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">Courses</h2>
-        
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <Container>
+      <Box mt={4}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Курси
+        </Typography>
+        {error && <Typography color="error">{error}</Typography>}
+        {userInfo.role === 'trainer' && (
+          <Button
+            component={Link}
+            to="/create-course"
+            variant="contained"
+            color="primary"
+            sx={{ mb: 2 }}
+          >
+            Створити новий курс
+          </Button>
+        )}
+        <Grid container spacing={3}>
           {courses.map((course) => (
-            <div key={course._id} className="bg-gray-100 p-4 rounded-lg shadow-md">
-              <img src={course.photo} alt={course.name} className="w-full h-48 object-cover rounded-lg" />
-              <h3 className="text-xl font-bold mt-4">{course.name}</h3>
-              <p className="text-gray-700 mt-2">{course.shortDescription}</p>
-              <p className="text-green-600 font-bold mt-2">{course.price} UAH</p>
-              <Link to={`/courses/${course._id}`} className="btn-primary bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out mt-4 block text-center">
-                View Details
-              </Link>
-              <button
-                onClick={() => handlePurchase(course._id, course.price)}
-                className="btn-primary bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300 ease-in-out mt-4 block text-center"
-              >
-                Purchase
-              </button>
-            </div>
+            <Grid item xs={12} md={6} lg={4} key={course._id}>
+              <Paper sx={{ p: 2 }}>
+                <img src={course.photo} alt={course.name} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                <Typography variant="h6" component="h3" sx={{ mt: 2 }}>{course.name}</Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>{course.shortDescription}</Typography>
+                <Typography variant="body2">Ціна: {course.price} грн</Typography>
+                <Button
+                  component={Link}
+                  to={`/courses/${course._id}`}
+                  variant="outlined"
+                  color="primary"
+                  sx={{ mt: 2 }}
+                >
+                  Переглянути курс
+                </Button>
+              </Paper>
+            </Grid>
           ))}
-        </div>
-      </div>
-    </div>
+        </Grid>
+      </Box>
+    </Container>
   );
 };
 

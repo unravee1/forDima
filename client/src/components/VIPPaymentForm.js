@@ -1,59 +1,60 @@
 import React, { useState } from 'react';
+import { Container, Box, Typography, TextField, Button } from '@mui/material';
 
 const VIPPaymentForm = () => {
-  const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState(1200); // Приклад початкового балансу користувача
   const [error, setError] = useState(null);
+  const vipPrice = 250; // Ціна абонементу
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const handlePayment = async () => {
+    if (balance >= vipPrice) {
+      try {
+        const response = await fetch('http://localhost:5000/api/payments/upgrade-vip', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ userId: userInfo._id, amount: vipPrice }),
+        });
 
-    try {
-      const response = await fetch('http://localhost:5000/api/payment/upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-        body: JSON.stringify({ userId: userInfo._id, amount: 250 }),
-      });
+        const data = await response.json();
 
-      if (response.ok) {
-        const data = await response.json();
-        alert('Successfully upgraded to VIP');
-        // Оновіть інформацію користувача в localStorage
-        const updatedUser = { ...userInfo, vipStatus: true, balance: data.balance };
-        localStorage.setItem('userInfo', JSON.stringify(updatedUser));
-      } else {
-        const data = await response.json();
-        setError(data.message);
+        if (response.ok) {
+          setBalance(balance - vipPrice);
+          alert('Ви успішно придбали VIP абонемент');
+        } else {
+          setError(data.message);
+        }
+      } catch (err) {
+        setError('Сталася помилка. Спробуйте ще раз.');
       }
-    } catch (err) {
-      setError('Failed to upgrade to VIP');
-    } finally {
-      setLoading(false);
+    } else {
+      setError('Недостатньо коштів на балансі.');
     }
   };
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="max-w-lg mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">VIP Membership Payment</h2>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <button
-            type="submit"
-            className="btn-primary bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out w-full"
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : 'Pay 250 UAH'}
-          </button>
-        </form>
-      </div>
-    </div>
+    <Container>
+      <Box mt={4}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Придбати VIP абонемент
+        </Typography>
+        {error && <Typography color="error">{error}</Typography>}
+        <Typography variant="h6">Ваш баланс: {balance} грн</Typography>
+        <Typography variant="body1">Ціна VIP абонементу: {vipPrice} грн</Typography>
+        <Button
+          onClick={handlePayment}
+          variant="contained"
+          color="primary"
+          sx={{ mt: 2 }}
+        >
+          Придбати VIP абонемент
+        </Button>
+      </Box>
+    </Container>
   );
 };
 
 export default VIPPaymentForm;
-

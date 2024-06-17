@@ -1,29 +1,30 @@
 import React, { useState } from 'react';
-import { Container, Box, TextField, Button, Typography } from '@mui/material';
+import { Container, Box, Typography, TextField, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-const RegisterPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const CreateGroupPage = () => {
   const [name, setName] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('http://localhost:5000/api/groups', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ name, date, time }),
       });
+
       const data = await response.json();
+
       if (response.ok) {
-        localStorage.setItem('userInfo', JSON.stringify(data));
-        navigate('/'); // Перехід на головну сторінку після успішної реєстрації
-        window.location.reload(); // Оновлення навбару для авторизованого користувача
+        navigate('/groups');
       } else {
         setError(data.message);
       }
@@ -36,12 +37,12 @@ const RegisterPage = () => {
     <Container>
       <Box mt={4}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Реєстрація
+          Створити нову групу
         </Typography>
         {error && <Typography color="error">{error}</Typography>}
         <form onSubmit={handleSubmit}>
           <TextField
-            label="Ім'я"
+            label="Назва"
             type="text"
             fullWidth
             margin="normal"
@@ -50,25 +51,25 @@ const RegisterPage = () => {
             required
           />
           <TextField
-            label="Електронна пошта"
-            type="email"
+            label="Дата"
+            type="date"
             fullWidth
             margin="normal"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
             required
           />
           <TextField
-            label="Пароль"
-            type="password"
+            label="Час"
+            type="time"
             fullWidth
             margin="normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
             required
           />
           <Button type="submit" variant="contained" color="primary" fullWidth>
-            Зареєструватися
+            Створити групу
           </Button>
         </form>
       </Box>
@@ -76,4 +77,4 @@ const RegisterPage = () => {
   );
 };
 
-export default RegisterPage;
+export default CreateGroupPage;

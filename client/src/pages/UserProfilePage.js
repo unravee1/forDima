@@ -1,49 +1,44 @@
 import React, { useState, useEffect } from 'react';
-
-const defaultPhoto = 'https://via.placeholder.com/150'; // URL фото за замовчуванням
+import { Container, Box, Typography, TextField, Button, Avatar, Paper } from '@mui/material';
 
 const ProfilePage = () => {
-  const [userInfo, setUserInfo] = useState(JSON.parse(localStorage.getItem('userInfo')));
-  const [name, setName] = useState(userInfo.name);
-  const [email, setEmail] = useState(userInfo.email);
-  const [age, setAge] = useState(userInfo.age || '');
-  const [weight, setWeight] = useState(userInfo.weight || '');
-  const [photo, setPhoto] = useState(userInfo.photo || defaultPhoto);
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [editMode, setEditMode] = useState(false);
+  const [user, setUser] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [age, setAge] = useState('');
+  const [weight, setWeight] = useState('');
+  const [photo, setPhoto] = useState('');
+  const [balance, setBalance] = useState(0);
+  const [error, setError] = useState(null);
+  const vipPrice = 250; // Ціна абонементу
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
   useEffect(() => {
-    if (!userInfo) {
-      window.location.href = '/login';
-    }
-  }, [userInfo]);
+    fetchUserDetails();
+  }, []);
 
-  const updateProfileHandler = async (e) => {
-    e.preventDefault();
+  const fetchUserDetails = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/users/profile', {
-        method: 'PUT',
+      const response = await fetch(`http://localhost:5000/api/users/${userInfo._id}`, {
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ name, email, age, weight, photo, password }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        setUserInfo(data);
-        localStorage.setItem('userInfo', JSON.stringify(data));
-        setMessage('Profile updated successfully');
-        setEditMode(false);
+        setUser(data);
+        setName(data.name);
+        setEmail(data.email);
+        setAge(data.age);
+        setWeight(data.weight);
+        setPhoto(data.photo);
+        setBalance(data.balance); // Оновлення балансу користувача
       } else {
         setError(data.message);
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Сталася помилка. Спробуйте ще раз.');
     }
   };
 
@@ -58,99 +53,147 @@ const ProfilePage = () => {
     }
   };
 
-  const handleVIPPurchase = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/payment/upgrade', {
-        method: 'POST',
+      const response = await fetch(`http://localhost:5000/api/users/${userInfo._id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ userId: userInfo._id, amount: 250 }),
+        body: JSON.stringify({ name, email, age, weight, photo }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        setUserInfo({ ...userInfo, vipStatus: true, balance: data.balance });
-        localStorage.setItem('userInfo', JSON.stringify({ ...userInfo, vipStatus: true, balance: data.balance }));
-        setMessage('Successfully upgraded to VIP');
+        setUser(data);
+        setEditing(false);
       } else {
         setError(data.message);
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Сталася помилка. Спробуйте ще раз.');
     }
   };
 
+  const handlePurchaseVip = async () => {
+    if (balance >= vipPrice) {
+      try {
+        const response = await fetch('http://localhost:5000/api/users/upgrade-vip', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ userId: userInfo._id, amount: vipPrice }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setBalance(balance - vipPrice);
+          fetchUserDetails(); // Оновити інформацію про користувача
+          alert('Ви успішно придбали VIP абонемент');
+        } else {
+          setError(data.message);
+        }
+      } catch (err) {
+        setError('Сталася помилка. Спробуйте ще раз.');
+      }
+    } else {
+      setError('Недостатньо коштів на балансі.');
+    }
+  };
+
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
+
+  if (!user) {
+    return <Typography>Завантаження...</Typography>;
+  }
+
   return (
-    <div className="container mx-auto px-4">
-      <div className="max-w-lg mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-center">User Profile</h2>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-        {message && <div className="text-green-500 mb-4">{message}</div>}
-        {!editMode ? (
-          <div>
-            <div className="mb-4 text-center">
-              <img src={photo} alt="Profile" className="mx-auto" style={{ maxHeight: '150px' }} />
-            </div>
-            <div className="mb-4">
-              <p><strong>Name:</strong> {name}</p>
-              <p><strong>Email:</strong> {email}</p>
-              <p><strong>Age:</strong> {age}</p>
-              <p><strong>Weight:</strong> {weight}</p>
-              <p><strong>VIP Status:</strong> 
-                <span className={userInfo.vipStatus ? 'text-green-500' : 'text-red-500'}>
-                  {userInfo.vipStatus ? 'Active' : 'Inactive'}
-                </span>
-              </p>
-            </div>
-            <button onClick={() => setEditMode(true)} className="btn-primary bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out w-full">
-              Edit Profile
-            </button>
-            {!userInfo.vipStatus && (
-              <button onClick={handleVIPPurchase} className="btn-primary bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300 ease-in-out w-full mt-4">
-                Purchase VIP Membership for 250
-              </button>
+    <Container>
+      <Box mt={4}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Профіль
+        </Typography>
+        <Paper sx={{ p: 2, mt: 2 }}>
+          <Avatar alt={name} src={photo} sx={{ width: 100, height: 100 }} />
+          {!photo && <Typography>Фото за замовчуванням</Typography>}
+          <Typography variant="h6">{name}</Typography>
+          <Typography variant="body1">{email}</Typography>
+          <Typography variant="body1">Вік: {age}</Typography>
+          <Typography variant="body1">Вага: {weight}</Typography>
+          <Typography variant="h6">Баланс: {balance} грн</Typography>
+          <Typography variant="body1" sx={{ color: user.vipStatus ? 'green' : 'red' }}>
+            {user.vipStatus ? 'VIP Абонемент активний' : 'VIP Абонемент не активний'}
+          </Typography>
+          <Box mt={2}>
+            {!user.vipStatus && (
+              <Button variant="contained" color="primary" onClick={handlePurchaseVip} sx={{ mr: 2 }}>
+                Придбати VIP абонемент за {vipPrice} грн
+              </Button>
             )}
-          </div>
-        ) : (
-          <form onSubmit={updateProfileHandler}>
-            <div className="mb-4">
-              <label>Photo</label>
-              <input type="file" onChange={handlePhotoChange} className="input" />
-              {photo && <img src={photo} alt="Profile" className="mt-2" style={{ maxHeight: '150px' }} />}
-            </div>
-            <div className="mb-4">
-              <label>Name</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="input" />
-            </div>
-            <div className="mb-4">
-              <label>Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input" />
-            </div>
-            <div className="mb-4">
-              <label>Age</label>
-              <input type="number" value={age} onChange={(e) => setAge(e.target.value)} className="input" />
-            </div>
-            <div className="mb-4">
-              <label>Weight</label>
-              <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} className="input" />
-            </div>
-            <div className="mb-4">
-              <label>Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" />
-            </div>
-            <button type="submit" className="btn-primary bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out w-full">
-              Save Changes
-            </button>
-            <button onClick={() => setEditMode(false)} className="btn-secondary bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-300 ease-in-out w-full mt-4">
-              Cancel
-            </button>
+            <Button variant="contained" color="primary" onClick={() => setEditing(true)}>
+              Редагувати
+            </Button>
+          </Box>
+        </Paper>
+        {editing && (
+          <form onSubmit={handleSubmit} sx={{ mt: 4 }}>
+            <TextField
+              label="Ім'я"
+              type="text"
+              fullWidth
+              margin="normal"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <TextField
+              label="Електронна пошта"
+              type="email"
+              fullWidth
+              margin="normal"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <TextField
+              label="Вік"
+              type="number"
+              fullWidth
+              margin="normal"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              required
+            />
+            <TextField
+              label="Вага"
+              type="number"
+              fullWidth
+              margin="normal"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              required
+            />
+            <TextField
+              label="Фото"
+              type="file"
+              fullWidth
+              margin="normal"
+              onChange={handlePhotoChange}
+            />
+            {photo && <img src={photo} alt="Фото" style={{ maxHeight: '150px' }} />}
+            <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
+              Зберегти зміни
+            </Button>
           </form>
         )}
-      </div>
-    </div>
+      </Box>
+    </Container>
   );
 };
 

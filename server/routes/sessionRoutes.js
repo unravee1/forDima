@@ -7,17 +7,17 @@ import {
     updateSession, 
     deleteSession 
 } from '../controllers/sessionController.js';
-import { protect, trainerOrAdmin } from '../middleware/authMiddleware.js';
+import { protect, trainer} from '../middleware/authMiddleware.js';
 
 // Маршрут для отримання всіх сесій і створення нової сесії
 router.route('/')
     .get(getSessions)
-    .post(protect, trainerOrAdmin, createSession);
+    .post(protect, trainer, createSession);
 
 // Маршрут для отримання сесії за ID, оновлення і видалення сесії
 router.route('/:id')
     .get(getSessionById)
-    .put(protect, trainerOrAdmin, updateSession)
-    .delete(protect, trainerOrAdmin, deleteSession);
+    .put(protect, trainer, updateSession)
+    .delete(protect, trainer, deleteSession);
 
 export default router;
